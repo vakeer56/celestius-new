@@ -37,7 +37,7 @@ export default function Footer({ setActivePage }) {
       <div className="absolute inset-0 nothing-dot-grid opacity-15 pointer-events-none" />
 
       {/* Main Footer Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-14 pb-28 sm:py-16">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-14 pb-36 sm:pb-24 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-14 text-left">
           
           {/* Column 1: Brand & Bio (6 cols) */}
@@ -175,29 +175,37 @@ export default function Footer({ setActivePage }) {
         </div>
 
         {/* Bottom Bar: Copyright on Left, Privacy & Refund Policies on the Right */}
-        <div className="pt-8 mt-12 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs text-zinc-500">
-          <p className="text-zinc-400 text-center sm:text-left flex items-center gap-1.5">
-            <span>© {new Date().getFullYear()}</span>
-            <span className="text-[#FFCC00] font-bold">CELESTIUS</span>
-            <span className="text-zinc-600">//</span>
-            <span>CIT CHENNAI. ALL RIGHTS RESERVED.</span>
-          </p>
+        <div className="pt-8 mt-12 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-5 md:gap-4 font-mono text-xs">
+          {/* Copyright & Institution Notice */}
+          <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2.5 text-center sm:text-left text-zinc-400">
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap font-medium text-zinc-400">© {new Date().getFullYear()}</span>
+              <span className="text-[#FFCC00] font-bold tracking-wider">CELESTIUS</span>
+              <span className="text-zinc-600 hidden sm:inline">//</span>
+            </div>
+            <span className="text-zinc-500 text-[11px] sm:text-xs tracking-wider">
+              CIT CHENNAI. ALL RIGHTS RESERVED.
+            </span>
+          </div>
 
-          <div className="flex items-center gap-4 text-xs">
+          {/* Privacy & Refund Policy Buttons */}
+          <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
             <button
               type="button"
               onClick={() => setActivePolicy('privacy')}
-              className="text-zinc-400 hover:text-[#FFCC00] transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-[#FFCC00]/40 text-zinc-400 hover:text-white transition-all cursor-pointer text-[11px] sm:text-xs flex items-center gap-2 group shadow-sm active:scale-95"
             >
-              Privacy Policy
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-[#FFCC00] transition-colors" />
+              <span>Privacy Policy</span>
             </button>
-            <span className="text-zinc-700">//</span>
+
             <button
               type="button"
               onClick={() => setActivePolicy('refund')}
-              className="text-zinc-400 hover:text-[#FFCC00] transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-[#FFCC00]/40 text-zinc-400 hover:text-white transition-all cursor-pointer text-[11px] sm:text-xs flex items-center gap-2 group shadow-sm active:scale-95"
             >
-              Refund Policy
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-[#FFCC00] transition-colors" />
+              <span>Refund Policy</span>
             </button>
           </div>
         </div>

@@ -530,6 +530,36 @@ export default function Team({ introCompleted = true, setActivePage }) {
     return { first: parts[0], last: parts.slice(1).join(' ') };
   };
 
+  // Helper to check if a valid personal GitHub profile was provided
+  const isValidGithubUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    const clean = url.trim().replace(/\/+$/, '').toLowerCase();
+    return (
+      clean.length > 0 &&
+      clean !== 'https://github.com' &&
+      clean !== 'http://github.com' &&
+      clean !== 'https://www.github.com' &&
+      clean !== 'http://www.github.com' &&
+      clean !== '#'
+    );
+  };
+
+  // Helper to check if a valid personal LinkedIn profile was provided
+  const isValidLinkedinUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    const clean = url.trim().replace(/\/+$/, '').toLowerCase();
+    return (
+      clean.length > 0 &&
+      clean !== 'https://linkedin.com' &&
+      clean !== 'http://linkedin.com' &&
+      clean !== 'https://www.linkedin.com' &&
+      clean !== 'http://www.linkedin.com' &&
+      clean !== 'https://linkedin.com/in' &&
+      clean !== 'https://www.linkedin.com/in' &&
+      clean !== '#'
+    );
+  };
+
   const filteredMembers = teamData.filter((member) => {
     return searchQuery === '' || 
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -537,10 +567,10 @@ export default function Team({ introCompleted = true, setActivePage }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-28 text-left space-y-12 select-none">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-28 text-left space-y-10 sm:space-y-12 select-none">
       
       {/* Page Header: Centered "KNOW ABOUT US" Title */}
-      <section className="relative text-center pt-2 pb-4">
+      <section className="relative text-center pt-2">
         <ScrollReveal animation="fade-up" delay={0} introCompleted={introCompleted}>
           <h1 
             className="font-ndot text-4xl sm:text-6xl lg:text-7xl text-white tracking-wider uppercase leading-none"
@@ -549,13 +579,13 @@ export default function Team({ introCompleted = true, setActivePage }) {
             KNOW ABOUT <span className="text-[#FFCC00]">US</span>
           </h1>
         </ScrollReveal>
+
+        {/* Horizontal Line Divider tightly framed under header */}
+        <div className="w-full border-b border-white/10 mt-5 sm:mt-7" />
       </section>
 
-      {/* Horizontal Line Divider */}
-      <div className="w-full border-b border-white/10" />
-
       {/* 1. VISION SECTION (Open, Unboxed Editorial Architecture with Left-aligned Animation) */}
-      <section className="relative pt-10 sm:pt-14">
+      <section className="relative pt-0 sm:pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           {/* Left Column: Vision Graphic (Inspired by Reference Image) */}
           <div className="lg:col-span-5 flex justify-center order-2 lg:order-1">
@@ -594,10 +624,10 @@ export default function Team({ introCompleted = true, setActivePage }) {
       </section>
 
       {/* 3. MISSION SECTION (Open, Unboxed Architecture - Alternating Zig-Zag: Content Left, Graphic Right) */}
-      <section className="relative border-t border-white/10 pt-16 sm:pt-20">
+      <section className="relative border-t border-white/10 pt-10 sm:pt-16 lg:pt-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           {/* Left Column: Mission Editorial Text */}
-          <div className="lg:col-span-7 space-y-5 order-2 lg:order-1">
+          <div className="lg:col-span-7 space-y-5 order-1 lg:order-1">
             <ScrollReveal animation="fade-up" delay={50} introCompleted={introCompleted}>
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2.5 font-mono text-xs font-bold text-[#FFCC00] tracking-[0.25em] uppercase">
@@ -624,14 +654,14 @@ export default function Team({ introCompleted = true, setActivePage }) {
           </div>
 
           {/* Right Column: Mission Graphic (Inspired by Reference Image) */}
-          <div className="lg:col-span-5 flex justify-center order-1 lg:order-2">
+          <div className="lg:col-span-5 flex justify-center order-2 lg:order-2">
             <MissionAnimation introCompleted={introCompleted} />
           </div>
         </div>
       </section>
 
       {/* 4. CREW DIRECTORY & ACCESS BADGES */}
-      <section id="community-section" className="relative border-t border-white/10 pt-16 sm:pt-20 space-y-8">
+      <section id="community-section" className="relative border-t border-white/10 pt-10 sm:pt-16 lg:pt-20 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <ScrollReveal animation="fade-up" delay={50} introCompleted={introCompleted}>
             <div className="space-y-2">
@@ -801,33 +831,58 @@ export default function Team({ introCompleted = true, setActivePage }) {
                       </div>
 
                       {/* HANDLES: ONLY GitHub & LinkedIn Links */}
-                      <div className="px-4 pt-2 pb-3 flex items-center justify-center gap-2 relative z-20">
-                        {member.github && (
-                          <a
-                            href={member.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 hover:text-black font-mono text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 active:scale-95 shadow-sm cursor-pointer"
-                            title={`${member.name}'s GitHub`}
-                          >
-                            <Github className="w-3.5 h-3.5 text-zinc-700" />
-                            <span>GITHUB</span>
-                          </a>
-                        )}
+                      {(() => {
+                        const hasGithub = isValidGithubUrl(member.github);
+                        const hasLinkedin = isValidLinkedinUrl(member.linkedin);
 
-                        {member.linkedin && (
-                          <a
-                            href={member.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 hover:text-black font-mono text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 active:scale-95 shadow-sm cursor-pointer"
-                            title={`${member.name}'s LinkedIn`}
-                          >
-                            <Linkedin className="w-3.5 h-3.5 text-[#D97706]" />
-                            <span>LINKEDIN</span>
-                          </a>
-                        )}
-                      </div>
+                        return (
+                          <div className="px-4 pt-2 pb-3 flex items-center justify-center gap-2 relative z-20">
+                            {/* GitHub Handle */}
+                            {hasGithub ? (
+                              <a
+                                href={member.github}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 hover:text-black font-mono text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 active:scale-95 shadow-sm cursor-pointer"
+                                title={`${member.name}'s GitHub`}
+                              >
+                                <Github className="w-3.5 h-3.5 text-zinc-700" />
+                                <span>GITHUB</span>
+                              </a>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-zinc-100/60 border border-zinc-200/50 text-zinc-400 font-mono text-[10px] font-bold uppercase tracking-wider opacity-45 cursor-not-allowed select-none shadow-none"
+                                title={`${member.name}'s GitHub not provided`}
+                              >
+                                <Github className="w-3.5 h-3.5 text-zinc-400" />
+                                <span>GITHUB</span>
+                              </span>
+                            )}
+
+                            {/* LinkedIn Handle */}
+                            {hasLinkedin ? (
+                              <a
+                                href={member.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 hover:text-black font-mono text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 active:scale-95 shadow-sm cursor-pointer"
+                                title={`${member.name}'s LinkedIn`}
+                              >
+                                <Linkedin className="w-3.5 h-3.5 text-[#D97706]" />
+                                <span>LINKEDIN</span>
+                              </a>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-zinc-100/60 border border-zinc-200/50 text-zinc-400 font-mono text-[10px] font-bold uppercase tracking-wider opacity-45 cursor-not-allowed select-none shadow-none"
+                                title={`${member.name}'s LinkedIn not provided`}
+                              >
+                                <Linkedin className="w-3.5 h-3.5 text-zinc-400" />
+                                <span>LINKEDIN</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* AUTHENTIC BARCODE STRIP (Faithful to Reference Image) */}
                       <div className="pt-1 pb-2 flex flex-col items-center justify-center pointer-events-none">

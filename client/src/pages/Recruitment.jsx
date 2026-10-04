@@ -26,7 +26,8 @@ import {
   Clock,
   Shield,
   Target,
-  PenTool
+  PenTool,
+  Lock
 } from 'lucide-react';
 
 // Dynamic Bi-directional Scroll Reveal Component
@@ -377,7 +378,13 @@ const renderSkillLogo = (skill) => {
   return <Sparkles className="w-4 h-4 text-zinc-400 shrink-0" />;
 };
 
-export default function Recruitment({ introCompleted = true, setActivePage, recruitmentOpenStatus = true }) {
+export default function Recruitment({ 
+  introCompleted = true, 
+  setActivePage, 
+  recruitmentOpenStatus = false,
+  closedRoles = ['Backend Developer'],
+  recruitmentStatusLoading = false
+}) {
   const [activeDivision, setActiveDivision] = useState('all');
   const [selectedRole, setSelectedRole] = useState(null);
 
@@ -390,10 +397,10 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
   ];
 
   const closedPhrases = [
-    "STAY TUNED FOR APPLYING.",
-    "GET READY FOR JOINING THE CREW.",
-    "PREPARE YOUR PORTFOLIO & TRACKS.",
-    "APPLICATIONS OPENING SOON."
+    "RECRUITMENT APPLICATIONS ARE CURRENTLY CLOSED.",
+    "THANK YOU FOR YOUR INTEREST.",
+    "CANDIDATE SHORTLISTS ROLLING OUT SOON.",
+    "STAY TUNED FOR RESULTS & NEXT INTAKE."
   ];
 
   const phrases = recruitmentOpenStatus ? activePhrases : closedPhrases;
@@ -451,7 +458,8 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
 
   // Navigate to /recruitment/apply and Pre-select role silently in localStorage
   const handleApplyForRole = (role) => {
-    if (!recruitmentOpenStatus) {
+    const isThisRoleClosed = closedRoles && (closedRoles.includes(role.name) || closedRoles.includes(role.subRole));
+    if (!recruitmentOpenStatus || isThisRoleClosed) {
       return;
     }
 
@@ -495,17 +503,19 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
       <section className="relative space-y-6 pt-2 pb-2">
         <div className="space-y-5 max-w-4xl">
           <ScrollReveal animation="fade-down" delay={0}>
-            <div className="flex items-center gap-2.5 font-mono text-xs">
+            <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
               {recruitmentOpenStatus ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-[#FFCC00] animate-pulse" />
-                  <span className="tracking-widest uppercase font-bold text-[#FFCC00]">CELESTIUS RECRUITMENTS</span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFCC00]/10 border border-[#FFCC00]/30 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-[#FFCC00] animate-pulse" />
+                    <span className="tracking-widest uppercase font-bold text-[#FFCC00]">REGISTRATIONS WILL BE CLOSING SHORTLY</span>
+                  </div>
                 </>
               ) : (
-                <>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 font-mono text-xs">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  <span className="tracking-widest uppercase font-bold text-amber-400">RECRUITMENTS CURRENTLY PAUSED • STAY TUNED </span>
-                </>
+                  <span className="tracking-widest uppercase font-bold text-amber-400">RECRUITMENTS CLOSED • STAY TUNED</span>
+                </div>
               )}
             </div>
           </ScrollReveal>
@@ -526,11 +536,11 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
           <ScrollReveal animation="fade-up" delay={160}>
             {recruitmentOpenStatus ? (
               <p className="text-sm sm:text-base text-zinc-300 font-sans leading-relaxed max-w-3xl">
-                Celestius recruitments are now officially live. Explore our Technical and Non-Technical divisions, review role mandates, and launch the multi-step application console.
+                Celestius recruitments are now officially live. Explore our Technical and Non-Technical divisions, review role mandates, and launch the multi-step application console. Registrations will be closing soon!
               </p>
             ) : (
               <p className="text-sm sm:text-base text-zinc-300 font-sans leading-relaxed max-w-3xl">
-                Recruitment applications are currently closed. Get ready for joining the crew and stay tuned for the next official intake announcement! In the meantime, explore our divisions and role mandates below.
+                Recruitment applications for this cohort are currently closed. Review our divisions and role mandates below, and stay tuned for candidate shortlists and the next official intake announcement!
               </p>
             )}
           </ScrollReveal>
@@ -552,9 +562,9 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
                   <span>APPLY NOW</span>
                 </button>
               ) : (
-                <div className="px-6 py-3.5 rounded-xl bg-white/5 border border-amber-500/30 text-amber-300 font-mono text-sm font-bold uppercase tracking-wider flex items-center gap-2.5 shadow-[0_0_20px_rgba(245,158,11,0.15)] select-none">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>STAY TUNED • APPLICATIONS OPENING SOON</span>
+                <div className="px-6 py-3.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 font-mono text-sm font-bold uppercase tracking-wider flex items-center gap-2.5 shadow-sm select-none">
+                  <Clock className="w-4 h-4 text-zinc-500" />
+                  <span>APPLICATIONS CLOSED FOR THIS CYCLE</span>
                 </div>
               )}
 
@@ -630,6 +640,7 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
           {getDisplayedRoles().map((role, idx) => {
             const IconComp = role.icon || Sparkles;
             const isTech = role.division === 'Tech';
+            const isRoleClosed = closedRoles && (closedRoles.includes(role.name) || closedRoles.includes(role.subRole));
 
             return (
               <ScrollReveal 
@@ -640,62 +651,85 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
               >
                 <div 
                   onClick={() => setSelectedRole(role)}
-                  className={`group relative rounded-3xl p-6 sm:p-7 cursor-pointer transition-all duration-300 ease-out border flex flex-col justify-between overflow-hidden hover:-translate-y-1.5 hover:scale-[1.01] h-full ${
-                    isTech
-                      ? 'border-[#FFCC00]/40 bg-gradient-to-b from-[#16140b] via-[#0b0c0f] to-[#060608] shadow-[0_0_25px_rgba(255,204,0,0.12)] hover:border-[#FFCC00] hover:shadow-[0_12px_40px_rgba(255,204,0,0.28)]'
-                      : 'border-sky-400/40 bg-gradient-to-b from-[#091522] via-[#0b0c0f] to-[#060608] shadow-[0_0_25px_rgba(56,189,248,0.12)] hover:border-sky-400 hover:shadow-[0_12px_40px_rgba(56,189,248,0.28)]'
+                  className={`group relative rounded-3xl p-6 sm:p-7 cursor-pointer transition-all duration-300 ease-out border flex flex-col justify-between overflow-hidden hover:-translate-y-1 hover:scale-[1.005] h-full ${
+                    isRoleClosed
+                      ? 'border-white/10 bg-[#08090d]/90 opacity-40 grayscale-[0.55] hover:opacity-65 hover:grayscale-[0.15] shadow-none hover:border-white/20'
+                      : isTech
+                        ? 'border-[#FFCC00]/40 bg-gradient-to-b from-[#16140b] via-[#0b0c0f] to-[#060608] shadow-[0_0_25px_rgba(255,204,0,0.12)] hover:border-[#FFCC00] hover:shadow-[0_12px_40px_rgba(255,204,0,0.28)]'
+                        : 'border-sky-400/40 bg-gradient-to-b from-[#091522] via-[#0b0c0f] to-[#060608] shadow-[0_0_25px_rgba(56,189,248,0.12)] hover:border-sky-400 hover:shadow-[0_12px_40px_rgba(56,189,248,0.28)]'
                   }`}
                 >
-                  <div 
-                    className={`absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl ${
-                      isTech ? 'from-[#FFCC00]/20' : 'from-sky-400/20'
-                    }`} 
-                  />
+                  {!isRoleClosed && (
+                    <div 
+                      className={`absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl ${
+                        isTech ? 'from-[#FFCC00]/20' : 'from-sky-400/20'
+                      }`} 
+                    />
+                  )}
 
                   <div className="relative z-10">
                     <div className="flex items-center justify-between">
                       <div 
-                        className={`w-12 h-12 rounded-2xl bg-black/70 border flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-sm ${
-                          isTech
-                            ? 'border-[#FFCC00]/40 text-[#FFCC00] group-hover:bg-[#FFCC00]/20'
-                            : 'border-sky-400/40 text-sky-400 group-hover:bg-sky-400/20'
+                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all duration-300 group-hover:scale-105 shadow-sm ${
+                          isRoleClosed
+                            ? 'border-white/10 text-zinc-500 bg-zinc-900/60'
+                            : isTech
+                              ? 'border-[#FFCC00]/40 text-[#FFCC00] bg-black/70 group-hover:bg-[#FFCC00]/20'
+                              : 'border-sky-400/40 text-sky-400 bg-black/70 group-hover:bg-sky-400/20'
                         }`}
                       >
                         <IconComp className="w-5 h-5" />
                       </div>
 
-                      <span 
-                        className={`px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider border ${
-                          isTech 
-                            ? 'bg-[#FFCC00]/10 text-[#FFCC00] border-[#FFCC00]/30' 
-                            : 'bg-sky-400/10 text-sky-400 border-sky-400/30'
-                        }`}
-                      >
-                        {role.division}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {isRoleClosed && (
+                          <span className="px-2 py-0.5 rounded-full font-mono text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400/80 border border-amber-500/25 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>CLOSED</span>
+                          </span>
+                        )}
+                        <span 
+                          className={`px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider border ${
+                            isRoleClosed
+                              ? 'bg-white/5 text-zinc-500 border-white/10'
+                              : isTech 
+                                ? 'bg-[#FFCC00]/10 text-[#FFCC00] border-[#FFCC00]/30' 
+                                : 'bg-sky-400/10 text-sky-400 border-sky-400/30'
+                          }`}
+                        >
+                          {role.division}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-5">
                       <h3 
                         className={`font-ndot text-3xl sm:text-4xl tracking-wide uppercase leading-none transition-all ${
-                          isTech ? 'text-[#FFCC00]' : 'text-sky-400'
+                          isRoleClosed
+                            ? 'text-zinc-400'
+                            : isTech ? 'text-[#FFCC00]' : 'text-sky-400'
                         }`}
                         style={{ fontFamily: "'VT323', monospace" }}
                       >
                         {role.name}
                       </h3>
-                      <p className="font-sans text-xs sm:text-sm text-zinc-300 mt-2 leading-relaxed line-clamp-2">
+                      <p className={`font-sans text-xs sm:text-sm mt-2 leading-relaxed line-clamp-2 ${isRoleClosed ? 'text-zinc-500' : 'text-zinc-300'}`}>
                         {role.tagline}
                       </p>
                     </div>
                   </div>
 
                   <div className="relative z-10 pt-4 mt-6 border-t border-white/10 flex items-center justify-between font-mono text-xs">
-                    <span className="text-zinc-400 flex items-center gap-1.5">
+                    <span className="text-zinc-500 flex items-center gap-1.5">
+                      {isRoleClosed && (
+                        <span className="text-[10px] font-mono tracking-wider font-semibold text-amber-500/70">
+                          [ SLOTS FULL ]
+                        </span>
+                      )}
                     </span>
                     <span 
                       className={`font-bold flex items-center gap-1 transition-transform group-hover:translate-x-1 ${
-                        isTech ? 'text-[#FFCC00]' : 'text-sky-400'
+                        isRoleClosed ? 'text-zinc-500' : isTech ? 'text-[#FFCC00]' : 'text-sky-400'
                       }`}
                     >
                       <span>VIEW DETAILS</span>
@@ -719,6 +753,7 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
             const isTech = selectedRole.division === 'Tech';
             const accentColor = isTech ? '#FFCC00' : '#38bdf8';
             const RoleIcon = selectedRole.icon || Sparkles;
+            const isModalRoleClosed = closedRoles && (closedRoles.includes(selectedRole.name) || closedRoles.includes(selectedRole.subRole));
 
             // 3D Spherical & Liquid Mesh Gradient Config matching the reference images
             const bubbleTheme = isTech
@@ -828,9 +863,16 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
                         <RoleIcon className="w-5 h-5" />
                       </div>
 
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
-                        {selectedRole.division} TRACK
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                          {selectedRole.division} TRACK
+                        </span>
+                        {isModalRoleClosed && (
+                          <span className="px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/35">
+                            CLOSED
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Role Title & Tagline */}
@@ -850,7 +892,12 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
 
                   {/* Left Column Bottom Action */}
                   <div className="pt-6 mt-6 border-t border-white/10 hidden md:block">
-                    {recruitmentOpenStatus ? (
+                    {isModalRoleClosed ? (
+                      <div className="w-full py-3.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 select-none shadow-sm">
+                        <Lock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>APPLICATIONS CLOSED FOR THIS ROLE</span>
+                      </div>
+                    ) : recruitmentOpenStatus ? (
                       <button
                         onClick={() => handleApplyForRole(selectedRole)}
                         className="group/applyBtn w-full py-3.5 px-4 rounded-xl text-black font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all duration-300 active:scale-95 cursor-pointer hover:brightness-110 relative overflow-hidden"
@@ -956,7 +1003,12 @@ export default function Recruitment({ introCompleted = true, setActivePage, recr
 
                   {/* Mobile Only Apply Button */}
                   <div className="pt-4 border-t border-white/10 md:hidden">
-                    {recruitmentOpenStatus ? (
+                    {isModalRoleClosed ? (
+                      <div className="w-full py-3.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 select-none shadow-sm">
+                        <Lock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>APPLICATIONS CLOSED FOR THIS ROLE</span>
+                      </div>
+                    ) : recruitmentOpenStatus ? (
                       <button
                         onClick={() => handleApplyForRole(selectedRole)}
                         className="w-full py-3.5 px-4 rounded-xl text-black font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"

@@ -65,7 +65,9 @@ export default function App() {
   const [introCompleted, setIntroCompleted] = useState(initialPage === 'not-found');
 
   // Global recruitment open status control step
-  const [recruitmentOpenStatus, setRecruitmentOpenStatus] = useState(true);
+  // Strictly defaults to false (closed) so if backend is disconnected, applications remain closed
+  const [recruitmentOpenStatus, setRecruitmentOpenStatus] = useState(false);
+  const [closedRoles, setClosedRoles] = useState(['Backend Developer']);
   const [recruitmentStatusLoading, setRecruitmentStatusLoading] = useState(true);
 
   useEffect(() => {
@@ -80,13 +82,28 @@ export default function App() {
           const contentType = res.headers.get('content-type') || '';
           if (contentType.includes('application/json')) {
             const data = await res.json();
-            if (isMounted && typeof data.recruitmentOpenStatus === 'boolean') {
-              setRecruitmentOpenStatus(data.recruitmentOpenStatus);
+            if (isMounted) {
+              if (data && data.success && typeof data.recruitmentOpenStatus === 'boolean') {
+                setRecruitmentOpenStatus(data.recruitmentOpenStatus);
+              } else {
+                setRecruitmentOpenStatus(false);
+              }
+              if (data && Array.isArray(data.closedRoles)) {
+                setClosedRoles(data.closedRoles);
+              }
             }
+            return;
           }
         }
+        // Non-OK response fallback: keep applications closed
+        if (isMounted) {
+          setRecruitmentOpenStatus(false);
+        }
       } catch (err) {
-        console.warn('Could not fetch recruitment status:', err);
+        console.warn('Backend disconnected or status check failed. Defaulting to closed state:', err);
+        if (isMounted) {
+          setRecruitmentOpenStatus(false);
+        }
       } finally {
         if (isMounted) setRecruitmentStatusLoading(false);
       }
@@ -257,6 +274,7 @@ export default function App() {
                 introCompleted={introCompleted} 
                 setActivePage={handlePageChange}
                 recruitmentOpenStatus={recruitmentOpenStatus}
+                closedRoles={closedRoles}
                 recruitmentStatusLoading={recruitmentStatusLoading}
               />
             )}
@@ -265,6 +283,7 @@ export default function App() {
                 introCompleted={introCompleted} 
                 setActivePage={handlePageChange}
                 recruitmentOpenStatus={recruitmentOpenStatus}
+                closedRoles={closedRoles}
                 recruitmentStatusLoading={recruitmentStatusLoading}
               />
             )}

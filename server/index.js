@@ -37,15 +37,34 @@ const connectDB = async () => {
     cachedConnection = conn;
     console.log('✓ [DATABASE] MongoDB connected successfully');
 
-    // Ensure recruitment config document exists
+    // Ensure recruitment config document exists and has registrationCloseDate & closedRoles physically written to MongoDB
     try {
-      const existingConfig = await Config.findOne({ key: 'recruitment_config' });
+      const defaultCloseDate = new Date("2026-10-15T23:59:59+05:30");
+      const defaultClosedRoles = ["Backend Developer"];
+      const existingConfig = await Config.findOne({ key: 'recruitment_config' }).lean();
       if (!existingConfig) {
         await Config.create({
           key: 'recruitment_config',
           recruitmentOpenStatus: true,
+          registrationCloseDate: defaultCloseDate,
+          closedRoles: defaultClosedRoles,
         });
-        console.log('✓ [DATABASE] Initialized recruitment_config document with recruitmentOpenStatus: true');
+        console.log('✓ [DATABASE] Initialized recruitment_config document with recruitmentOpenStatus: true, registrationCloseDate, and closedRoles: [Backend Developer]');
+      } else {
+        const updateFields = {};
+        if (!existingConfig.registrationCloseDate) {
+          updateFields.registrationCloseDate = defaultCloseDate;
+        }
+        if (!existingConfig.closedRoles || !Array.isArray(existingConfig.closedRoles)) {
+          updateFields.closedRoles = defaultClosedRoles;
+        }
+        if (Object.keys(updateFields).length > 0) {
+          await Config.updateOne(
+            { key: 'recruitment_config' },
+            { $set: updateFields }
+          );
+          console.log('✓ [DATABASE] Updated existing recruitment_config document with fields:', Object.keys(updateFields).join(', '));
+        }
       }
     } catch (cfgErr) {
       console.warn('! [DATABASE] Could not verify recruitment_config initialization:', cfgErr.message);
@@ -99,42 +118,87 @@ app.post('/check-student', checkStudentExists);
 app.get('/api/recruitment/status', async (req, res) => {
   try {
     const config = await Config.findOne({ key: 'recruitment_config' });
-    const recruitmentOpenStatus = config ? config.recruitmentOpenStatus : true;
+    if (!config) {
+      return res.status(200).json({
+        success: false,
+        recruitmentOpenStatus: false,
+        message: "Recruitment config document not initialized.",
+      });
+    }
+
+    const manualStatus = config.recruitmentOpenStatus === true;
+    const registrationCloseDate = config.registrationCloseDate || null;
+    
+    // Auto-calculate if registration deadline has passed
+    const isPastDeadline = registrationCloseDate ? (Date.now() > new Date(registrationCloseDate).getTime()) : false;
+    const recruitmentOpenStatus = manualStatus && !isPastDeadline;
+
     return res.status(200).json({
       success: true,
       recruitmentOpenStatus,
+      closedRoles: Array.isArray(config.closedRoles) ? config.closedRoles : ['Backend Developer'],
     });
   } catch (error) {
     console.error("Error fetching recruitment status:", error);
-    return res.status(200).json({
-      success: true,
-      recruitmentOpenStatus: true,
-      warning: "Offline fallback mode: defaulted to open",
+    // When backend database is disconnected, default strictly to closed state
+    return res.status(503).json({
+      success: false,
+      recruitmentOpenStatus: false,
+      closedRoles: ['Backend Developer'],
+      error: "Backend database disconnected",
+      message: "Recruitment status currently unavailable. Defaulting to closed.",
     });
   }
 });
 
-// Update Recruitment Open Status API (Control step toggle)
+// Update Recruitment Open Status, Deadline & Closed Roles API
 app.post('/api/recruitment/status', async (req, res) => {
   try {
-    const { recruitmentOpenStatus } = req.body;
-    if (typeof recruitmentOpenStatus !== 'boolean') {
+    const { recruitmentOpenStatus, registrationCloseDate, closedRoles } = req.body;
+    const update = {};
+
+    if (typeof recruitmentOpenStatus === 'boolean') {
+      update.recruitmentOpenStatus = recruitmentOpenStatus;
+    }
+
+    if (Array.isArray(closedRoles)) {
+      update.closedRoles = closedRoles;
+    }
+
+    if (registrationCloseDate) {
+      const parsedDate = new Date(registrationCloseDate);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid registrationCloseDate format. Please provide a valid ISO date string.",
+        });
+      }
+      update.registrationCloseDate = parsedDate;
+    }
+
+    if (Object.keys(update).length === 0) {
       return res.status(400).json({
         success: false,
-        message: "recruitmentOpenStatus must be a boolean (true or false).",
+        message: "Provide recruitmentOpenStatus (boolean), registrationCloseDate (ISO date string), and/or closedRoles (array of strings).",
       });
     }
 
     const config = await Config.findOneAndUpdate(
       { key: 'recruitment_config' },
-      { recruitmentOpenStatus },
+      update,
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    const isPastDeadline = config.registrationCloseDate ? (Date.now() > new Date(config.registrationCloseDate).getTime()) : false;
+    const effectiveOpenStatus = config.recruitmentOpenStatus && !isPastDeadline;
+
     return res.status(200).json({
       success: true,
-      recruitmentOpenStatus: config.recruitmentOpenStatus,
-      message: `Recruitment status updated to ${config.recruitmentOpenStatus}.`,
+      recruitmentOpenStatus: effectiveOpenStatus,
+      manualStatus: config.recruitmentOpenStatus,
+      isPastDeadline,
+      registrationCloseDate: config.registrationCloseDate,
+      message: `Recruitment configuration updated successfully.`,
     });
   } catch (error) {
     console.error("Error updating recruitment status:", error);

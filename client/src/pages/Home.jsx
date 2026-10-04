@@ -199,7 +199,7 @@ function HephaestusShowpiece() {
 export default function Home({ 
   setActivePage, 
   introCompleted = true,
-  recruitmentOpenStatus = true 
+  recruitmentOpenStatus = false 
 }) {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-24 text-left space-y-24 animate-fadeIn overflow-hidden">

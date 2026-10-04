@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import { getApiBaseUrl } from '../config/api';
+import { useToast } from '../context/ToastContext';
 
 const RECRUITMENT_CONTACTS = [
   {
@@ -939,9 +940,12 @@ export const isValidLinkedinSlug = (slug) => {
 export default function RecruitmentApply({ 
   introCompleted = true, 
   setActivePage,
-  recruitmentOpenStatus = true,
+  recruitmentOpenStatus = false,
+  closedRoles = ['Backend Developer'],
   recruitmentStatusLoading = false
 }) {
+  const { showToast } = useToast();
+
   // Track whether the intro animation was running when this page mounted
   const wasIntroPlayingOnMount = useRef(!introCompleted);
 
@@ -1018,7 +1022,11 @@ export default function RecruitmentApply({
           year: '1st Year', // Always strictly locked to 1st Year
           section: parsed.section || '',
           role: preselectedRole?.role || parsed.role || 'Tech',
-          subRole: preselectedRole?.subRole || parsed.subRole || 'Frontend Developer',
+          subRole: (preselectedRole?.subRole && !(closedRoles && closedRoles.includes(preselectedRole.subRole)))
+            ? preselectedRole.subRole
+            : (parsed.subRole && !(closedRoles && closedRoles.includes(parsed.subRole)))
+              ? parsed.subRole
+              : 'Frontend Developer',
           githubUsername: parsed.githubUsername || '',
           githubConfirmed: Boolean(parsed.githubConfirmed),
           linkedinUsername: parsed.linkedinUsername || '',
@@ -1113,16 +1121,29 @@ export default function RecruitmentApply({
       if (chosen) {
         const parsed = JSON.parse(chosen);
         if (parsed?.role && parsed?.subRole) {
-          setFormData((prev) => ({
-            ...prev,
-            role: parsed.role,
-            subRole: parsed.subRole
-          }));
+          const isRoleClosed = closedRoles && closedRoles.includes(parsed.subRole);
+          if (!isRoleClosed) {
+            setFormData((prev) => ({
+              ...prev,
+              role: parsed.role,
+              subRole: parsed.subRole
+            }));
+          }
         }
         localStorage.removeItem('celestius_recruitment_selected_role');
       }
     } catch (e) {}
-  }, []);
+  }, [closedRoles]);
+
+  // If the currently selected subRole happens to be in closedRoles, automatically fall back to an open role
+  useEffect(() => {
+    if (closedRoles && closedRoles.includes(formData.subRole)) {
+      setFormData((prev) => ({
+        ...prev,
+        subRole: prev.role === 'Tech' ? 'Frontend Developer' : 'Event Operations'
+      }));
+    }
+  }, [closedRoles, formData.subRole, formData.role]);
 
   // Auto-save form data silently to localStorage on every input change (only while form active)
   useEffect(() => {
@@ -1605,6 +1626,8 @@ export default function RecruitmentApply({
       }
       if (!formData.subRole) {
         errors.subRole = 'Please select a specific role.';
+      } else if (closedRoles && closedRoles.includes(formData.subRole)) {
+        errors.subRole = `Applications for the ${formData.subRole} role are currently closed. Please choose an open role.`;
       }
     }
 
@@ -1731,6 +1754,16 @@ export default function RecruitmentApply({
         status: 'conflict',
         message: 'Already Registered',
         details: preCheck.message || 'A candidate with this information has already registered.'
+      });
+      return;
+    }
+
+    if (closedRoles && closedRoles.includes(formData.subRole)) {
+      setIsSubmitting(false);
+      setSubmitResult({
+        status: 'error',
+        message: 'Role Applications Closed',
+        details: `Applications for the ${formData.subRole} role are officially closed. Please choose another role to proceed.`
       });
       return;
     }
@@ -1922,7 +1955,7 @@ export default function RecruitmentApply({
             {/* Status Tag */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-amber-500/30 font-mono text-xs">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-amber-300 font-bold uppercase tracking-wider">[ RECRUITMENT APPLICATIONS PAUSED ]</span>
+              <span className="text-amber-300 font-bold uppercase tracking-wider">[ RECRUITMENT APPLICATIONS CLOSED ]</span>
             </div>
           </div>
 
@@ -1932,13 +1965,13 @@ export default function RecruitmentApply({
               className="font-ndot text-4xl sm:text-6xl text-white tracking-wide uppercase leading-tight"
               style={{ fontFamily: "'VT323', monospace" }}
             >
-              STAY TUNED FOR APPLYING.
+              APPLICATIONS ARE CLOSED.
             </h1>
             <p className="font-mono text-sm sm:text-base text-[#FFCC00] uppercase tracking-wider font-semibold">
-              // GET READY FOR JOINING THE CREW.
+              // REGISTRATIONS ARE NOW CLOSED.
             </p>
             <p className="font-sans text-xs sm:text-sm text-zinc-300 leading-relaxed pt-2">
-              Celestius recruitment submissions are currently closed as candidate applications undergo evaluation. Stay tuned for future intake announcements and track updates. In the meantime, explore all our technical and non-technical domains!
+              Recruitment applications for this cycle are officially closed. Submissions are now under evaluation by domain leads. Stay tuned for shortlist announcements and future opportunities to join Celestius!
             </p>
           </div>
 
@@ -2138,26 +2171,39 @@ export default function RecruitmentApply({
         className="space-y-3"
         style={getAnimStyle(0.05, '0.7s')}
       >
-        <div className="flex items-center justify-between pb-2">
-          <button
-            onClick={() => setActivePage('recruitment')}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/10 border border-white/15 hover:border-[#FFCC00]/50 text-xs font-mono text-zinc-200 hover:text-white transition-all cursor-pointer group shadow-sm"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#FFCC00] transition-transform group-hover:-translate-x-1" />
-            <span className="font-semibold tracking-wide uppercase text-[11px]">Back to Roles</span>
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-2">
+          {/* Top Row on Mobile: Back button + Step counter aligned symmetrically */}
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <button
+              onClick={() => setActivePage('recruitment')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/10 border border-white/15 hover:border-[#FFCC00]/50 text-xs font-mono text-zinc-200 hover:text-white transition-all cursor-pointer group shadow-sm shrink-0"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[#FFCC00] transition-transform group-hover:-translate-x-1" />
+              <span className="font-semibold tracking-wide uppercase text-[11px]">Back to Roles</span>
+            </button>
+
+            {/* Mobile-only Step Counter pill (aligned across from Back button) */}
+            <div className="sm:hidden inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/15 font-mono text-xs shadow-sm shrink-0">
+              <span className="w-2 h-2 rounded-full bg-[#FFCC00] shadow-[0_0_8px_rgba(255,204,0,0.8)] animate-pulse" />
+              <span className="text-[#FFCC00] font-bold tracking-wider">Step 0{currentStep}</span>
+              <span className="text-zinc-500">/</span>
+              <span className="text-zinc-300 font-semibold">06</span>
+            </div>
+          </div>
           
-          <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Action Row: Help Contact button (full width on mobile, inline on desktop) + Desktop Step Counter */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setShowHelpModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#FFCC00]/10 hover:bg-[#FFCC00]/20 border border-[#FFCC00]/30 hover:border-[#FFCC00] text-zinc-200 hover:text-[#FFCC00] font-mono text-xs transition-all shadow-sm group cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFCC00]/10 hover:bg-[#FFCC00]/20 border border-[#FFCC00]/30 hover:border-[#FFCC00] text-zinc-200 hover:text-[#FFCC00] font-mono text-xs transition-all shadow-sm group cursor-pointer text-center"
             >
-              <PhoneCall className="w-3.5 h-3.5 text-[#FFCC00] group-hover:scale-110 transition-transform" />
-              <span>Need help in recruitment? Reach us</span>
+              <PhoneCall className="w-3.5 h-3.5 text-[#FFCC00] group-hover:scale-110 transition-transform shrink-0" />
+              <span className="truncate">Need help in recruitment? Reach us</span>
             </button>
 
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] border border-white/15 font-mono text-xs shadow-sm">
+            {/* Desktop Step Counter */}
+            <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] border border-white/15 font-mono text-xs shadow-sm shrink-0">
               <span className="w-2 h-2 rounded-full bg-[#FFCC00] shadow-[0_0_8px_rgba(255,204,0,0.8)] animate-pulse" />
               <span className="text-[#FFCC00] font-bold tracking-wider">Step 0{currentStep}</span>
               <span className="text-zinc-500">/</span>
@@ -2173,8 +2219,12 @@ export default function RecruitmentApply({
           >
             Candidate Application
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 font-sans">
-            Complete the details below to submit your recruitment application.
+          <p className="text-xs sm:text-sm text-zinc-400 font-sans flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>Complete the details below to submit your recruitment application.</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#FFCC00] bg-[#FFCC00]/10 border border-[#FFCC00]/25 px-2 py-0.5 rounded-md">
+              <Clock className="w-3 h-3 text-[#FFCC00]" />
+              <span>Registrations will be closing soon</span>
+            </span>
           </p>
         </div>
 
@@ -2774,44 +2824,64 @@ export default function RecruitmentApply({
                             const meta = ROLE_DETAILS[roleName];
                             const IconComp = meta?.icon || Layers;
                             const isSelected = formData.subRole === roleName;
+                            const isRoleClosed = closedRoles && closedRoles.includes(roleName);
                             const accent = formData.role === 'Tech' ? '#FFCC00' : '#38bdf8';
 
                             return (
                               <button
                                 key={roleName}
                                 type="button"
-                                onClick={() => setFormData((prev) => ({ ...prev, subRole: roleName }))}
-                                className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
-                                  isSelected
-                                    ? formData.role === 'Tech'
-                                      ? 'border-[#FFCC00] bg-[#FFCC00]/10 text-white shadow-[0_0_12px_rgba(255,204,0,0.12)]'
-                                      : 'border-sky-400 bg-sky-400/10 text-white shadow-[0_0_12px_rgba(56,189,248,0.12)]'
-                                    : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
+                                onClick={() => {
+                                  if (isRoleClosed) {
+                                    showToast(
+                                      `Slots are completely filled for ${roleName}! Please choose another domain.`,
+                                      'warning',
+                                      5000
+                                    );
+                                    return;
+                                  }
+                                  setFormData((prev) => ({ ...prev, subRole: roleName }));
+                                }}
+                                className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
+                                  isRoleClosed
+                                    ? 'border-white/5 bg-white/[0.01] text-zinc-500 opacity-50 hover:opacity-85 hover:border-amber-500/30'
+                                    : isSelected
+                                      ? formData.role === 'Tech'
+                                        ? 'border-[#FFCC00] bg-[#FFCC00]/10 text-white shadow-[0_0_12px_rgba(255,204,0,0.12)]'
+                                        : 'border-sky-400 bg-sky-400/10 text-white shadow-[0_0_12px_rgba(56,189,248,0.12)]'
+                                      : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
                                   <div 
                                     className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border"
                                     style={{
-                                      backgroundColor: isSelected ? `${accent}25` : 'rgba(255,255,255,0.03)',
-                                      borderColor: isSelected ? accent : 'rgba(255,255,255,0.1)',
-                                      color: isSelected ? accent : '#a1a1aa'
+                                      backgroundColor: isRoleClosed ? 'transparent' : isSelected ? `${accent}25` : 'rgba(255,255,255,0.03)',
+                                      borderColor: isRoleClosed ? 'rgba(255,255,255,0.05)' : isSelected ? accent : 'rgba(255,255,255,0.1)',
+                                      color: isRoleClosed ? '#52525b' : isSelected ? accent : '#a1a1aa'
                                     }}
                                   >
                                     <IconComp className="w-3.5 h-3.5" />
                                   </div>
-                                  <span className="font-mono text-xs font-semibold uppercase truncate">
+                                  <span className={`font-mono text-xs font-semibold uppercase truncate ${isRoleClosed ? 'line-through text-zinc-500' : ''}`}>
                                     {roleName}
                                   </span>
                                 </div>
 
-                                <div 
-                                  className={`w-2 h-2 rounded-full shrink-0 ${
-                                    isSelected 
-                                      ? formData.role === 'Tech' ? 'bg-[#FFCC00]' : 'bg-sky-400' 
-                                      : 'bg-white/10'
-                                  }`}
-                                />
+                                {isRoleClosed ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                                    <Lock className="w-2.5 h-2.5" />
+                                    <span>CLOSED</span>
+                                  </span>
+                                ) : (
+                                  <div 
+                                    className={`w-2 h-2 rounded-full shrink-0 ${
+                                      isSelected 
+                                        ? formData.role === 'Tech' ? 'bg-[#FFCC00]' : 'bg-sky-400' 
+                                        : 'bg-white/10'
+                                    }`}
+                                  />
+                                )}
                               </button>
                             );
                           })}

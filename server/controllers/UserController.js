@@ -8,19 +8,53 @@ import Config from "../models/Config.js";
  */
 export const registerUser = async (req, res) => {
   try {
-    // 0. Check global recruitment open status control step
+    // 0. Check global recruitment open status and registration deadline
     try {
       const config = await Config.findOne({ key: "recruitment_config" });
-      if (config && config.recruitmentOpenStatus === false) {
+      if (!config) {
+        return res.status(503).json({
+          success: false,
+          recruitmentOpenStatus: false,
+          message: "Recruitment configuration unavailable. Applications are currently closed.",
+          error: "Recruitment config not found.",
+        });
+      }
+
+      const isPastDeadline = config.registrationCloseDate ? (Date.now() > new Date(config.registrationCloseDate).getTime()) : false;
+      if (config.recruitmentOpenStatus === false || isPastDeadline) {
+        const dateStr = config.registrationCloseDate 
+          ? new Date(config.registrationCloseDate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'long', day: 'numeric', year: 'numeric' })
+          : null;
+
         return res.status(403).json({
           success: false,
           recruitmentOpenStatus: false,
-          message: "Recruitment applications are currently closed. Stay tuned for joining the crew!",
+          message: isPastDeadline
+            ? "Recruitment applications are officially closed. The registration period has ended."
+            : "Recruitment applications are currently closed. Stay tuned for joining the crew!",
           error: "Recruitment is currently closed.",
         });
       }
+
+      // Check if candidate is applying for a role that is specifically closed (e.g. Backend Developer)
+      const closedRoles = Array.isArray(config.closedRoles) ? config.closedRoles : ['Backend Developer'];
+      const targetSubRole = (req.body.subRole || '').trim();
+      if (closedRoles.includes(targetSubRole)) {
+        return res.status(403).json({
+          success: false,
+          roleClosed: true,
+          message: `Applications for the ${targetSubRole} role are officially closed. Please choose another role.`,
+          error: "Selected role is closed.",
+        });
+      }
     } catch (configErr) {
-      console.warn("Could not query recruitment config, proceeding with default open status:", configErr.message);
+      console.error("Could not query recruitment config, refusing registration for safety:", configErr.message);
+      return res.status(503).json({
+        success: false,
+        recruitmentOpenStatus: false,
+        message: "Database connection unavailable. Applications are temporarily closed.",
+        error: "Database disconnected.",
+      });
     }
 
     const {

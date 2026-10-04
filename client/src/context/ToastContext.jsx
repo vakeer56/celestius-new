@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AlertOctagon, CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
@@ -19,20 +19,29 @@ export const queuePersistentToast = (message, type = 'error', duration = 12000) 
   }
 };
 
-// Individual Toast Item with pause-on-hover auto-dismiss logic
+// Individual Toast Item with ultra-clean modern design and fluid spring physics
 const ToastItem = ({ toast, onRemove }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
   const timerRef = React.useRef(null);
   const startTimeRef = React.useRef(Date.now());
-  const remainingRef = React.useRef(toast.duration || 10000);
+  const remainingRef = React.useRef(toast.duration || 6000);
+
+  const handleDismiss = useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onRemove(toast.id);
+    }, 260);
+  }, [onRemove, toast.id]);
 
   const startTimer = useCallback(() => {
     if (toast.duration <= 0) return;
     startTimeRef.current = Date.now();
     timerRef.current = setTimeout(() => {
-      onRemove(toast.id);
+      handleDismiss();
     }, remainingRef.current);
-  }, [toast.id, toast.duration, onRemove]);
+  }, [toast.duration, handleDismiss]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -45,45 +54,39 @@ const ToastItem = ({ toast, onRemove }) => {
     if (!isHovered) {
       startTimer();
     } else {
-      // While user cursor is on toast, pause countdown and preserve remaining time
+      // Pause countdown and preserve remaining time silently on hover
       const elapsed = Date.now() - startTimeRef.current;
-      remainingRef.current = Math.max(remainingRef.current - elapsed, 4000);
+      remainingRef.current = Math.max(remainingRef.current - elapsed, 2000);
       clearTimer();
     }
 
     return () => clearTimer();
   }, [isHovered, startTimer, clearTimer]);
 
+  // Clean, refined modern aesthetics (Completely free of any cyber/gaming/sci-fi theme)
   let theme = {
-    border: 'border-red-500/50',
-    bg: 'bg-black/95',
-    glow: 'shadow-[0_0_25px_rgba(239,68,68,0.3)]',
-    icon: <AlertOctagon className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-pulse" />,
-    badge: 'bg-red-500/10 text-red-400 border-red-500/30',
-    tag: 'SECURITY / DENIED',
+    iconBg: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    icon: <AlertCircle className="w-4 h-4" strokeWidth={2.2} />,
+    progressBar: 'bg-rose-500/40'
   };
 
   if (toast.type === 'success') {
     theme = {
-      border: 'border-emerald-500/50',
-      bg: 'bg-black/95',
-      glow: 'shadow-[0_0_25px_rgba(16,185,129,0.3)]',
-      icon: <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />,
-      badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-      tag: 'SYSTEM / VERIFIED',
+      iconBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      icon: <CheckCircle2 className="w-4 h-4" strokeWidth={2.2} />,
+      progressBar: 'bg-emerald-500/40'
     };
-  } else if (toast.type === 'info' || toast.type === 'warning') {
+  } else if (toast.type === 'warning') {
     theme = {
-      border: 'border-[#FFCC00]/50',
-      bg: 'bg-black/95',
-      glow: 'shadow-[0_0_25px_rgba(255,204,0,0.3)]',
-      icon: toast.type === 'warning' ? (
-        <AlertTriangle className="w-5 h-5 text-[#FFCC00] shrink-0 mt-0.5" />
-      ) : (
-        <Info className="w-5 h-5 text-[#FFCC00] shrink-0 mt-0.5" />
-      ),
-      badge: 'bg-[#FFCC00]/10 text-[#FFCC00] border-[#FFCC00]/30',
-      tag: 'SYSTEM / NOTICE',
+      iconBg: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+      icon: <AlertTriangle className="w-4 h-4" strokeWidth={2.2} />,
+      progressBar: 'bg-amber-400/40'
+    };
+  } else if (toast.type === 'info') {
+    theme = {
+      iconBg: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+      icon: <Info className="w-4 h-4" strokeWidth={2.2} />,
+      progressBar: 'bg-sky-400/40'
     };
   }
 
@@ -92,32 +95,58 @@ const ToastItem = ({ toast, onRemove }) => {
       role="alert"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border ${theme.border} ${theme.bg} ${theme.glow} backdrop-blur-xl transition-all duration-300 transform translate-y-0 opacity-100 shadow-2xl cursor-default select-text`}
+      style={{
+        animation: isExiting
+          ? 'toastBounceOut 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+          : 'toastBounceIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+      }}
+      className="pointer-events-auto relative overflow-hidden rounded-2xl bg-[#121316]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_16px_36px_rgba(0,0,0,0.55),0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] px-4 py-3.5 flex items-center gap-3.5 select-text group/toast w-full transition-shadow duration-200 hover:shadow-[0_20px_44px_rgba(0,0,0,0.65)]"
     >
-      {theme.icon}
+      {/* Subtle top edge gloss */}
+      <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+
+      {/* Gentle entrance gleam sweep */}
+      <div
+        className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.06] to-transparent -translate-x-full"
+        style={{
+          animation: 'toastShineSweep 0.8s ease-out 0.1s 1'
+        }}
+      />
+
+      {/* Clean circular icon pill */}
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${theme.iconBg} transition-transform duration-200 group-hover/toast:scale-105`}>
+        {theme.icon}
+      </div>
+
+      {/* Message content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`text-[10px] font-mono font-bold tracking-widest px-1.5 py-0.5 rounded border ${theme.badge}`}>
-            {theme.tag}
-          </span>
-          {isHovered && (
-            <span className="text-[9px] font-mono text-zinc-500 tracking-wider">
-              [PAUSED ON HOVER]
-            </span>
-          )}
-        </div>
-        <p className="text-sm font-sans text-white/90 leading-relaxed font-normal break-words">
+        <p className="text-[13.5px] font-sans font-medium text-zinc-100 leading-snug tracking-[-0.01em] break-words">
           {toast.message}
         </p>
       </div>
+
+      {/* Dismiss button */}
       <button
         type="button"
-        onClick={() => onRemove(toast.id)}
-        className="p-1 text-white/40 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+        onClick={handleDismiss}
+        className="p-1 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
         aria-label="Dismiss notification"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" strokeWidth={2.2} />
       </button>
+
+      {/* Micro hairline progress indicator */}
+      {toast.duration > 0 && (
+        <div className="absolute bottom-0 inset-x-0 h-[1.5px] bg-white/[0.04] overflow-hidden">
+          <div
+            className={`h-full ${theme.progressBar} transition-all`}
+            style={{
+              animation: `toastProgress ${toast.duration}ms linear forwards`,
+              animationPlayState: isHovered ? 'paused' : 'running'
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -129,7 +158,7 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message, type = 'error', duration = 10000) => {
+  const showToast = useCallback((message, type = 'error', duration = 6000) => {
     const id = Date.now() + Math.random().toString(36).substring(2, 7);
     setToasts((prev) => [...prev, { id, message, type, duration }]);
     return id;
@@ -142,7 +171,7 @@ export const ToastProvider = ({ children }) => {
       if (queued.length > 0) {
         sessionStorage.removeItem('celestius_toast_queue');
         queued.forEach((item) => {
-          showToast(item.message, item.type, item.duration || 12000);
+          showToast(item.message, item.type, item.duration || 8000);
         });
       }
     } catch {
@@ -153,8 +182,52 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast, removeToast }}>
       {children}
+      {/* Toast Keyframes: Fluid Spring Entrance, Exit & Progress */}
+      <style>{`
+        @keyframes toastBounceIn {
+          0% {
+            opacity: 0;
+            transform: translateY(-28px) scale(0.92);
+            filter: blur(8px);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(3px) scale(1.02);
+            filter: blur(0px);
+          }
+          80% {
+            transform: translateY(-1px) scale(0.995);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+        }
+        @keyframes toastBounceOut {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-18px) scale(0.94);
+            filter: blur(6px);
+          }
+        }
+        @keyframes toastShineSweep {
+          0% { transform: translateX(-100%); opacity: 0; }
+          30% { opacity: 0.15; }
+          100% { transform: translateX(200%); opacity: 0; }
+        }
+        @keyframes toastProgress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
       {/* Toast Render Overlay */}
-      <div className="fixed top-6 right-6 z-[99999] flex flex-col gap-3 pointer-events-none max-w-md w-full px-4 sm:px-0">
+      <div className="fixed top-5 right-5 sm:top-6 sm:right-6 z-[99999] flex flex-col gap-2.5 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
         ))}

@@ -13,6 +13,14 @@ const ConfigSchema = new mongoose.Schema(
       required: true,
       default: true,
     },
+    registrationCloseDate: {
+      type: Date,
+      default: () => new Date("2026-10-15T23:59:59+05:30"),
+    },
+    closedRoles: {
+      type: [String],
+      default: () => ["Backend Developer"],
+    },
   },
   { timestamps: true }
 );
